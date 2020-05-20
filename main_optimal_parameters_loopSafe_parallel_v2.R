@@ -2,13 +2,18 @@
 # MATCHING SLICES: CASUS ARABICUM
 ###########################################################################
 
+# IMPORTANT NOTE:
+# Ctrl+c will not stop multiprocessing, and the script will actually keep
+# running; `killall R` appears to do the trick (after Ctrl+c).
+
 # setting seed for reproducability (not sure if it is absolutely necessary)
 set.seed(786)
 
 ###########################################################################
 # CORPUS FOLDER
 corpusFolder  <- "./Hindawi_Corpus_65/"
-cores = 6
+versionRun    <- "run01"
+cores         <- 8
 ###########################################################################
 
 ###########################################################################
@@ -17,7 +22,7 @@ cores = 6
 featureTypeV       <- c("c") # c("c", "w")
 nGramSizeV         <- c(2, 3, 4, 5, 6, 7) #seq(1, 6, 1)
 mffLimitV          <- seq(100, 500, 100)
-cullingV           <- 0
+cullingV           <- seq(0, 50, 10)
 samplingType       <- "slicing"
 sliceStart         <- 1000 # means that the first `sliceStart` words will be skipped
 sliceTotal         <- 2
@@ -64,7 +69,7 @@ library(scriptName); thisFileName <- current_filename(); print(thisFileName)
 library(stringr)
 
 projectPrefix <- str_replace_all(corpusFolder, "\\W+", "")
-resultsFolder <- paste0(projectPrefix,"_results_",format(Sys.time(), "D%Y%m%dT%H%M%S"))
+resultsFolder <- paste0(projectPrefix,"_results_",versionRun)
 savePath      <- paste0("./",resultsFolder,"/")
 corpusFolder  <- corpusFolder; print(corpusFolder)
 dir.create(savePath, showWarnings = FALSE)
@@ -73,11 +78,10 @@ dir.create(savePath, showWarnings = FALSE)
 listOfFiles <- list.files(corpusFolder)
 
 # FINAL RESULTS FILES
-fileNameBase = paste0(projectPrefix, "_MultiProcessed_",format(Sys.time(), "D%Y%m%dT%H%M%S"))
-fileNameTSV <- paste0("_",fileNameBase,".csv")
+fileNameTSV <- "_cumulative_results.csv"
 
 # SAVING THE STATE OF THE SCRIPT AS A EASY WAY TO PRESERVE PARAMETERS WITH WITH DATA WAS PRODUCED
-fileNameRscriptState <- paste0("_",fileNameBase,".R")
+fileNameRscriptState <- paste0("_script_with_parameters.R")
 system(paste("cp",thisFileName, paste0(savePath,"/",fileNameRscriptState)))
 
 ###########################################################################
@@ -266,7 +270,7 @@ combine.results <- function(results.dir = "", prefix="_TEMP_") {
   for(file in list.of.files){
     if(startsWith(file, prefix)){
       message(file)
-      rows <- read_delim(paste0(results.dir,file), "\t", escape_double = FALSE, col_names = FALSE, trim_ws = TRUE)
+      rows <- read_delim(paste0(results.dir,file), "\t", escape_double = FALSE, col_names = TRUE, trim_ws = TRUE)
       tempDF <- rbind(tempDF, rows)
       #file.remove(paste0(results.dir,file))
     }
@@ -320,184 +324,188 @@ for (distanceMethod in distanceMethodV){
           library(ggplot2)
           library(dendextend)
           library(ggdendro)
+          library(stringr)
           
           for (mffLimit in mffLimitV){
             for (culling in cullingV){
-              corpus.features <- txt.to.features(corpus, ngram.size=nGramSize, features=featureType)
-              corpus.sliced <- make.slices.mgr(corpus.features, sampling = samplingType, slice.start = sliceStart,
-                                               slice.size = sliceLength, number.of.slices = sliceTotal)
-              frequent.features <- make.frequency.list(corpus.sliced, head=mffLimit)
-              freqs <- make.table.of.frequencies(corpus.sliced, features=frequent.features)
-              culled.freqs <- perform.culling(freqs, culling.level=culling)
+              # - Generate filename for the results with specific set of settings
+              fileNameBase <- paste0("_TEMP_",featureType, nGramSize,"_SL", sliceLength,"_ST",sliceTotal,"_MFF", mffLimit,"_CUL", culling,"_", distanceMethod,"_", clusteringMethod)
+              fileNameBase <- str_replace_all(fileNameBase, "\\W+", "")
+              message("\t--- ", fileNameBase,".csv")
+              fileCompletePath <- paste0(savePath,fileNameBase,".csv")
               
-              message("PROCESSING: ", featureType, nGramSize,
-                      " SLICE:", sliceLength,
-                      " MFF:", mffLimit,
-                      " CULLING:", culling,
-                      " DIST:", distanceMethod,
-                      " CLUSTER:", clusteringMethod
-              )
+              # - check if the file exists: yes > skip; no > generate results and save
               
-              # GENERATE DIFFERENCE DISTANCES
-              # - USING STYLO FUNCTIONS
-              if (distanceMethod == "cosine"){distanceMatrix <- dist.cosine(culled.freqs)
-              } else if (distanceMethod == "delta"){distanceMatrix <- dist.delta(culled.freqs)
-              } else if (distanceMethod == "argamon"){distanceMatrix <- dist.argamon(culled.freqs)
-              } else if (distanceMethod == "eder"){distanceMatrix <- dist.eder(culled.freqs)
-              } else if (distanceMethod == "minmax"){distanceMatrix <- dist.minmax(culled.freqs)
-              } else if (distanceMethod == "entropy"){distanceMatrix <- dist.entropy(culled.freqs)
-              } else if (distanceMethod == "simple"){distanceMatrix <- dist.simple(culled.freqs)
-              } else if (distanceMethod == "wurzburg"){distanceMatrix <- dist.wurzburg(culled.freqs)
-              # USING DIST FUNCTIONS
-              } else if (distanceMethod == "euclidean"){distanceMatrix <- dist(culled.freqs, method="euclidean")
-              } else if (distanceMethod == "maximum"){distanceMatrix <- dist(culled.freqs, method="maximum")
-              } else if (distanceMethod == "manhattan"){distanceMatrix <- dist(culled.freqs, method="manhattan")
-              } else if (distanceMethod == "canberra"){distanceMatrix <- dist(culled.freqs, method="canberra")
-              } else if (distanceMethod == "binary"){distanceMatrix <- dist(culled.freqs, method="binary")
-              } else if (distanceMethod == "minkowski"){distanceMatrix <- dist(culled.freqs, method="minkowski")
-              }
-              distanceMatrix <- as.dist(distanceMatrix)
-              
-              # CLUSTERING WILL NOT WORK ON VERY SMALL SAMPLES, THROWING AN ERROR: THESE CASES MUST BE SKIPPED
-              clustered.data <- tryCatch(hclust(distanceMatrix, method = clusteringMethod) , error = function(e) NULL)
-              
-              # if clustering successfull, continue processing...
-              # otherwise send a message
-              if(length(clustered.data) > 0) {
+              if (file.exists(fileCompletePath) == FALSE){
                 
-                # GENERATE A DENDROGRAM GRAPH AND SAVES PDF
-                if (saveGraphParameter == TRUE){
-                  
-                  ggDendr <- dendro_data(clustered.data)
-                  ggLabels <- as.data.frame(ggDendr$labels) %>%
-                    mutate(split = label) %>%
-                    separate(split, c("author", "book", "part"), sep = "_")
-                  
-                  colorAuthors <- rep(availableColors, length(unique(ggLabels$author)))  
-                  colorBooks   <- rep(availableColors, length(unique(ggLabels$book)))
-                  
-                  titleValue <- paste0(prefix, "; F: ", featureType, nGramSize,
-                                       "; CULL: ", culling, "; DIST: ", distanceMethod,
-                                       ": SL: ", sliceTotal, "; LEN: ", sliceLength)
-                  
-                  fileName <- paste0(str_replace_all(titleValue, "[ ;:\\.]+", "_"), ".pdf")
-                  
-                  ggplot() + 
-                    geom_segment(data=segment(ggDendr), aes(x=x, y=y, xend=xend, yend=yend)) + 
-                    geom_text(data=ggLabels, aes(x=x, y=y, label=book, hjust=0, color=author), size=3) +
-                    coord_flip() + 
-                    scale_y_reverse(expand=c(0.3, 0)) + 
-                    scale_color_manual(values = colorAuthors) +
-                    theme(#legend.position=c(max(y),max(ggLabels$y)),
-                      axis.line.y=element_blank(),
-                      axis.ticks.y=element_blank(),
-                      axis.text.y=element_blank(),
-                      axis.title.y=element_blank(),
-                      axis.title.x=element_blank(),
-                      panel.background=element_rect(fill="white"),
-                      panel.grid=element_blank(),
-                      #legend.position=c(0.1,0.1)
-                    ) + 
-                    ggtitle(titleValue)
-                  
-                  ggsave(
-                    filename = paste0(savePath,fileName),
-                    plot = last_plot(),
-                    device = "pdf",
-                    scale = 1,
-                    width = 11,
-                    height = 0.7+0.15*length(listOfFiles)*sliceTotal,
-                    units = "in",
-                    dpi = 300
-                  )
-                  
+                corpus.features <- txt.to.features(corpus, ngram.size=nGramSize, features=featureType)
+                corpus.sliced <- make.slices.mgr(corpus.features, sampling = samplingType, slice.start = sliceStart,
+                                                 slice.size = sliceLength, number.of.slices = sliceTotal)
+                frequent.features <- make.frequency.list(corpus.sliced, head=mffLimit)
+                freqs <- make.table.of.frequencies(corpus.sliced, features=frequent.features)
+                culled.freqs <- perform.culling(freqs, culling.level=culling)
+                
+                # GENERATE DIFFERENCE DISTANCES
+                # - USING STYLO FUNCTIONS
+                if (distanceMethod == "cosine"){distanceMatrix <- dist.cosine(culled.freqs)
+                } else if (distanceMethod == "delta"){distanceMatrix <- dist.delta(culled.freqs)
+                } else if (distanceMethod == "argamon"){distanceMatrix <- dist.argamon(culled.freqs)
+                } else if (distanceMethod == "eder"){distanceMatrix <- dist.eder(culled.freqs)
+                } else if (distanceMethod == "minmax"){distanceMatrix <- dist.minmax(culled.freqs)
+                } else if (distanceMethod == "entropy"){distanceMatrix <- dist.entropy(culled.freqs)
+                } else if (distanceMethod == "simple"){distanceMatrix <- dist.simple(culled.freqs)
+                } else if (distanceMethod == "wurzburg"){distanceMatrix <- dist.wurzburg(culled.freqs)
+                # USING DIST FUNCTIONS
+                } else if (distanceMethod == "euclidean"){distanceMatrix <- dist(culled.freqs, method="euclidean")
+                } else if (distanceMethod == "maximum"){distanceMatrix <- dist(culled.freqs, method="maximum")
+                } else if (distanceMethod == "manhattan"){distanceMatrix <- dist(culled.freqs, method="manhattan")
+                } else if (distanceMethod == "canberra"){distanceMatrix <- dist(culled.freqs, method="canberra")
+                } else if (distanceMethod == "binary"){distanceMatrix <- dist(culled.freqs, method="binary")
+                } else if (distanceMethod == "minkowski"){distanceMatrix <- dist(culled.freqs, method="minkowski")
                 }
+                distanceMatrix <- as.dist(distanceMatrix)
                 
-                # EXTRACTING INFO ON CLUSTERS
-                clusters <- cutree(clustered.data, k=length(unique(listOfFiles)))
-                clusters <- stack(clusters)
-                distanceTidy <- tidy_matrix(as.matrix(distanceMatrix))
+                # CLUSTERING WILL NOT WORK ON VERY SMALL SAMPLES, THROWING AN ERROR: THESE CASES MUST BE SKIPPED
+                clustered.data <- tryCatch(hclust(distanceMatrix, method = clusteringMethod) , error = function(e) NULL)
                 
-                # CHECK IF BOOKS MATCH THROUGH CLUSTERING
-                bookClusterMatch <- clusters %>%
-                  mutate(author_book = str_replace_all(ind, "_\\d+", "")) %>%
-                  group_by(author_book) %>%
-                  mutate(book_cluster_match = ifelse(length(unique(values)) == 1, 1, 0)) %>%
-                  select(author_book, book_cluster_match) %>%
-                  unique
-                
-                # CHECK IF BOOKS MATCH THROUGH DISTANCES
-                bookDistanceMatch <- distanceTidy %>%
-                  filter(value > 0) %>% unique %>%
-                  mutate(author_book = str_replace_all(row, "_\\d+", "")) %>%
-                  mutate(book_match = str_replace_all(col, "_\\d+", "")) %>%
-                  arrange(author_book, value) %>%
-                  select(author_book, book_match, value) %>% unique %>%
-                  group_by(author_book) %>%
-                  top_n(-1, wt=value) %>%
-                  mutate(dist_value=value) %>%
-                  ungroup() %>%
-                  mutate(book_dist_match = ifelse(author_book == book_match, 1, 0)) %>%
-                  select(author_book, book_match, book_dist_match, dist_value) %>%
-                  unique
-                
-                # CHECK IF AUTHORS MATCH THROUGH CLUSTERING
-                authorClusterMatch <- clusters %>%
-                  mutate(author_book = str_replace_all(ind, "_\\d+$", "")) %>%
-                  mutate(author = str_replace_all(ind, "_\\w+$", "")) %>%
-                  group_by(values) %>%
-                  mutate(author_cluster_match = ifelse(length(unique(author)) == 1, 1, 0)) %>%
-                  ungroup %>%
-                  select(author_book, author, author_cluster_match) %>%
-                  unique
-                
-                # CHECK IF AUTHORS MATCH THROUGH DISTANCES
-                authorDistanceMatch <- distanceTidy %>%
-                  filter(value > 0) %>% unique %>%
-                  mutate(author_book = str_replace_all(row, "_\\d+", "")) %>%
-                  mutate(author1 = str_replace_all(row, "_\\w+$", "")) %>%
-                  mutate(book_match = str_replace_all(col, "_\\d+", "")) %>%
-                  mutate(author2 = str_replace_all(col, "_\\w+$", "")) %>%
-                  select(author_book, book_match, author1, author2, value) %>% unique %>%
-                  group_by(author_book) %>%
-                  top_n(-1, wt=value) %>%
-                  mutate(dist_value=value) %>%
-                  ungroup() %>%
-                  mutate(author_dist_match = ifelse(author1 == author2, 1, 0)) %>%
-                  select(author_book, author_dist_match) %>%
-                  unique
-                
-                # AGGREGATE RESULTS INTO ONE DATAFRAME
-                final <- bookClusterMatch %>%
-                  left_join(bookDistanceMatch, by="author_book") %>%
-                  left_join(authorClusterMatch, by="author_book") %>%
-                  left_join(authorDistanceMatch, by="author_book") %>%
-                  select(author_book, book_match, book_cluster_match, book_dist_match, author_cluster_match, author_dist_match, dist_value) %>%
-                  mutate(feature = paste0(featureType,nGramSize)) %>%
-                  mutate(mff = mffLimit) %>%
-                  mutate(culling = culling) %>%
-                  mutate(slices_compared = sliceTotal) %>%
-                  mutate(slice_len = sliceLength) %>%
-                  mutate(distance_method = distanceMethod) %>%
-                  mutate(clustering_method = clusteringMethod)
-                
-                finalResults <- rbind(finalResults, final)
-                
-                # SAVE IN APPEND MODE - saving to avoid failure in script execution and losing results
-                finalResults <- finalResults %>%
-                  select(author_book,
-                         clustering_method, book_cluster_match, author_cluster_match,
-                         distance_method, dist_value, book_match, book_dist_match, author_dist_match,
-                         feature, mff, culling, slices_compared, slice_len) %>%
-                  unique
-                
-                fileNameBase = paste0("Hindawi_AllTexts_MultiProcessed_",format(Sys.time(), "D%Y%m%dT%H%M%S"))
-                fileNameTSV_part <- paste0("_TEMP_",fileNameBase,"_",sample(100:999,1),".csv")
-                write_tsv(finalResults, paste0(savePath,fileNameTSV_part), na = "NA", append = TRUE, col_names = FALSE)
-                finalResults = data.frame()
-                
+                # if clustering successfull, continue processing...
+                # otherwise send a message
+                if(length(clustered.data) > 0) {
+                  
+                  # GENERATE A DENDROGRAM GRAPH AND SAVES PDF
+                  if (saveGraphParameter == TRUE){
+                    
+                    ggDendr <- dendro_data(clustered.data)
+                    ggLabels <- as.data.frame(ggDendr$labels) %>%
+                      mutate(split = label) %>%
+                      separate(split, c("author", "book", "part"), sep = "_")
+                    
+                    colorAuthors <- rep(availableColors, length(unique(ggLabels$author)))  
+                    colorBooks   <- rep(availableColors, length(unique(ggLabels$book)))
+                    
+                    titleValue <- paste0(prefix, "; F: ", featureType, nGramSize,
+                                         "; CULL: ", culling, "; DIST: ", distanceMethod,
+                                         ": SL: ", sliceTotal, "; LEN: ", sliceLength)
+                    
+                    fileName <- paste0(str_replace_all(titleValue, "[ ;:\\.]+", "_"), ".pdf")
+                    
+                    ggplot() + 
+                      geom_segment(data=segment(ggDendr), aes(x=x, y=y, xend=xend, yend=yend)) + 
+                      geom_text(data=ggLabels, aes(x=x, y=y, label=book, hjust=0, color=author), size=3) +
+                      coord_flip() + 
+                      scale_y_reverse(expand=c(0.3, 0)) + 
+                      scale_color_manual(values = colorAuthors) +
+                      theme(#legend.position=c(max(y),max(ggLabels$y)),
+                        axis.line.y=element_blank(),
+                        axis.ticks.y=element_blank(),
+                        axis.text.y=element_blank(),
+                        axis.title.y=element_blank(),
+                        axis.title.x=element_blank(),
+                        panel.background=element_rect(fill="white"),
+                        panel.grid=element_blank(),
+                        #legend.position=c(0.1,0.1)
+                      ) + 
+                      ggtitle(titleValue)
+                    
+                    ggsave(
+                      filename = paste0(savePath,fileName),
+                      plot = last_plot(),
+                      device = "pdf",
+                      scale = 1,
+                      width = 11,
+                      height = 0.7+0.15*length(listOfFiles)*sliceTotal,
+                      units = "in",
+                      dpi = 300
+                    )
+                    
+                  }
+                  
+                  # EXTRACTING INFO ON CLUSTERS
+                  clusters <- cutree(clustered.data, k=length(unique(listOfFiles)))
+                  clusters <- stack(clusters)
+                  distanceTidy <- tidy_matrix(as.matrix(distanceMatrix))
+                  
+                  # CHECK IF BOOKS MATCH THROUGH CLUSTERING
+                  bookClusterMatch <- clusters %>%
+                    mutate(author_book = str_replace_all(ind, "_\\d+", "")) %>%
+                    group_by(author_book) %>%
+                    mutate(book_cluster_match = ifelse(length(unique(values)) == 1, 1, 0)) %>%
+                    select(author_book, book_cluster_match) %>%
+                    unique
+                  
+                  # CHECK IF BOOKS MATCH THROUGH DISTANCES
+                  bookDistanceMatch <- distanceTidy %>%
+                    filter(value > 0) %>% unique %>%
+                    mutate(author_book = str_replace_all(row, "_\\d+", "")) %>%
+                    mutate(book_match = str_replace_all(col, "_\\d+", "")) %>%
+                    arrange(author_book, value) %>%
+                    select(author_book, book_match, value) %>% unique %>%
+                    group_by(author_book) %>%
+                    top_n(-1, wt=value) %>%
+                    mutate(dist_value=value) %>%
+                    ungroup() %>%
+                    mutate(book_dist_match = ifelse(author_book == book_match, 1, 0)) %>%
+                    select(author_book, book_match, book_dist_match, dist_value) %>%
+                    unique
+                  
+                  # CHECK IF AUTHORS MATCH THROUGH CLUSTERING
+                  authorClusterMatch <- clusters %>%
+                    mutate(author_book = str_replace_all(ind, "_\\d+$", "")) %>%
+                    mutate(author = str_replace_all(ind, "_\\w+$", "")) %>%
+                    group_by(values) %>%
+                    mutate(author_cluster_match = ifelse(length(unique(author)) == 1, 1, 0)) %>%
+                    ungroup %>%
+                    select(author_book, author, author_cluster_match) %>%
+                    unique
+                  
+                  # CHECK IF AUTHORS MATCH THROUGH DISTANCES
+                  authorDistanceMatch <- distanceTidy %>%
+                    filter(value > 0) %>% unique %>%
+                    mutate(author_book = str_replace_all(row, "_\\d+", "")) %>%
+                    mutate(author1 = str_replace_all(row, "_\\w+$", "")) %>%
+                    mutate(book_match = str_replace_all(col, "_\\d+", "")) %>%
+                    mutate(author2 = str_replace_all(col, "_\\w+$", "")) %>%
+                    select(author_book, book_match, author1, author2, value) %>% unique %>%
+                    group_by(author_book) %>%
+                    top_n(-1, wt=value) %>%
+                    mutate(dist_value=value) %>%
+                    ungroup() %>%
+                    mutate(author_dist_match = ifelse(author1 == author2, 1, 0)) %>%
+                    select(author_book, author_dist_match) %>%
+                    unique
+                  
+                  # AGGREGATE RESULTS INTO ONE DATAFRAME
+                  final <- bookClusterMatch %>%
+                    left_join(bookDistanceMatch, by="author_book") %>%
+                    left_join(authorClusterMatch, by="author_book") %>%
+                    left_join(authorDistanceMatch, by="author_book") %>%
+                    select(author_book, book_match, book_cluster_match, book_dist_match, author_cluster_match, author_dist_match, dist_value) %>%
+                    mutate(feature = paste0(featureType,nGramSize)) %>%
+                    mutate(mff = mffLimit) %>%
+                    mutate(culling = culling) %>%
+                    mutate(slices_compared = sliceTotal) %>%
+                    mutate(slice_len = sliceLength) %>%
+                    mutate(distance_method = distanceMethod) %>%
+                    mutate(clustering_method = clusteringMethod)
+                  
+                  finalResults <- rbind(finalResults, final)
+                  
+                  # SAVE IN APPEND MODE - saving to avoid failure in script execution and losing results
+                  finalResults <- finalResults %>%
+                    select(author_book,
+                           clustering_method, book_cluster_match, author_cluster_match,
+                           distance_method, dist_value, book_match, book_dist_match, author_dist_match,
+                           feature, mff, culling, slices_compared, slice_len) %>%
+                    unique
+                  
+                  write_tsv(finalResults, fileCompletePath, na = "NA", append = FALSE, col_names = TRUE)
+                  finalResults = data.frame()
+                  
+                } else {
+                  message("\t--- no clustering is possible with these parameters. Skipping to the next set of values...")
+                }
               } else {
-                message("\t--- no clustering is possible with these parameters. Skipping to the next set of values...")
+                message("\t--- the results for these settings have already been generated. Skipping to the next set of values...")
               }
             }
           }
@@ -513,11 +521,11 @@ for (distanceMethod in distanceMethodV){
 finalResults <- combine.results(results.dir = savePath, prefix = "_TEMP_")
 colnames(finalResults) <- c("author_book", "clustering_method", "book_cluster_match",
                    "author_cluster_match", "distance_method", "dist_value",
-                   "book_match", "book_dist_match", "author_dist_match",
+                   "book_dist_matched", "book_dist_match", "author_dist_match",
                    "feature", "mff", "culling", "slices_compared", "slice_len")
 
 # cummulative fileNameTSV: must be defined in the variable section --- this one cannot be automatically generated
-write_tsv(finalResults, paste0(savePath,fileNameTSV), na = "NA", append = FALSE, col_names = FALSE)
+write_tsv(finalResults, paste0(savePath,fileNameTSV), na = "NA", append = FALSE, col_names = TRUE)
 # INITIATE DATAFRAME FOR FINAL RESULTS - END
 
 # REMOVE RESULTS ONLY AFTER ALL OTHER STEPS ARE COMPLETE

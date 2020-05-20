@@ -6,8 +6,8 @@ library(ggplot2)
 
 # LOAD TEST RESULST
 
-setwd("/Users/romanovienna/_ADHFANIS_Data/chapter_3/optimal_parameters/")
-file <- "./multiprocessing_results/_Hindawi_AllTexts_MultiProcessed_D20200517T160000.csv"
+setwd("/Users/romanovienna/_ADHFANIS_Data/chapter_3/stylometry_opt_arabic/")
+file <- "/Users/romanovienna/_ADHFANIS_Data/chapter_3/arc/arc_testing_halves_now_optimal_parameters/multiprocessing_results/_Hindawi_AllTexts_MultiProcessed_D20200517T160000.csv"
 
 data <- read_delim(file, "\t", escape_double = FALSE, col_names = FALSE, trim_ws = TRUE)
 
@@ -34,7 +34,6 @@ plot(dataTemp)
 # COMPLETE SET OF PARAMETERS
 
 # RUNNING PARAMETERS (HIGH-NUMBERS VECTORS)
-prefixV            <- "HindawiSampleCorpus"
 featureTypeV       <- c("w", "c") # c("c", "w")
 nGramSizeV         <- c(1,2,3,4,5) #seq(1, 6, 1)
 mffLimitV          <- seq(100, 500, 100)
