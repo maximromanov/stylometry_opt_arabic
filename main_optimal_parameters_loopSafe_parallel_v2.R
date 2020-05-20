@@ -11,9 +11,9 @@ set.seed(786)
 
 ###########################################################################
 # CORPUS FOLDER
-corpusFolder  <- "./Hindawi_Corpus_65/"
+corpusFolder  <- "./Hindawi_Corpus_65_c_wardD/"
 versionRun    <- "run01"
-cores         <- 8
+cores         <- 30
 ###########################################################################
 
 ###########################################################################
@@ -46,11 +46,11 @@ distanceMethodV    <- c(# >>> STYLO DIST FUNCTIONS
   "minkowski",
   "euclidean")
 clusteringMethodV  <- c(# HCLUST METHODS
-  "average",
-  "median",
-  "centroid",
-  "mcquitty",
-  "complete",
+  #"average",
+  #"median",
+  #"centroid",
+  #"mcquitty",
+  #"complete",
   "ward.D2"      # important
 )
 
