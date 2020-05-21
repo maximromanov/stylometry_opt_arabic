@@ -346,11 +346,16 @@ for (distanceMethod in distanceMethodV){
                 
                 # v4: WRAPPING INTO TRYCATCH();
                 culled.freqs <- tryCatch({
+                  message("\t\t> corpus.features...")
                   corpus.features <- txt.to.features(corpus, ngram.size=nGramSize, features=featureType)
+                  message("\t\t> corpus.sliced...")
                   corpus.sliced <- make.slices.mgr(corpus.features, sampling = samplingType, slice.start = sliceStart,
                                                    slice.size = sliceLength, number.of.slices = sliceTotal)
+                  message("\t\t> frequent.features...")
                   frequent.features <- make.frequency.list(corpus.sliced, head=mffLimit)
+                  message("\t\t> freqs...")
                   freqs <- make.table.of.frequencies(corpus.sliced, features=frequent.features)
+                  message("\t\t> culled.freqs...")
                   culled.freqs <- perform.culling(freqs, culling.level=culling)
                 }, error = function(e) NULL)
                 
