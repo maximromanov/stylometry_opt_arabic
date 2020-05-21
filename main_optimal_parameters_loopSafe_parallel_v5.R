@@ -211,8 +211,8 @@ make.slices.mgr <- function(tokenized.text, sampling = "slicing", slice.start = 
         #number.of.slices.mod = as.integer((text.length-slice.start)/slice.size)
         # DIRTY WORKAROUND > for short texts: EACH SLICE == FULL TEXT
         message(names(tokenized.text)[i])
-        #message(paste("\t", "- text length (in words): ", text.length, sep = ""))
-        #message(paste("\t", "- nr. of slices: ", number.of.slices, sep = ""))
+        message(paste("\t", "- text length (in words): ", text.length, sep = ""))
+        message(paste("\t", "- nr. of slices: ", number.of.slices, sep = ""))
         message(paste("\t", "- WARNING: slices contain the SAME text because the text is too short"))
         # iterate over the samples:
         current.start.index = slice.start
@@ -229,9 +229,9 @@ make.slices.mgr <- function(tokenized.text, sampling = "slicing", slice.start = 
         }
       } else {
         #number.of.slices = floor((text.length-sample.overlap)/(sample.size-sample.overlap))
-        #message(names(tokenized.text)[i])
-        #message(paste("\t", "- text length (in words): ", text.length, sep = ""))
-        #message(paste("\t", "- nr. of slices: ", number.of.slices, sep = ""))
+        message(names(tokenized.text)[i])
+        message(paste("\t", "- text length (in words): ", text.length, sep = ""))
+        message(paste("\t", "- nr. of slices: ", number.of.slices, sep = ""))
         # iterate over the samples:
         current.start.index = slice.start
         for(sample.index in 1:number.of.slices) {
@@ -318,18 +318,18 @@ for (distanceMethod in distanceMethodV){
         message("\t",distanceMethod,"::",clusteringMethod,"::",featureType,"::",nGramSize)
         
         # SINGLE PROCESSING: COMMENT OUT MULTIPROCESSING SECTION
-        for (sliceLength in sliceLengthV){
+        #for (sliceLength in sliceLengthV){
         
         # ACTIVATE MULTIPROCESSING - START (COMMENT OUT LINE ABOVE)
-        # foreach(sliceLength=sliceLengthV) %dopar% {
-        #   # IT LOOKS LIKE EVERYTHING NEEDS TO BE RE-LOADED WITHIN EACH FORLOOP 
-        #   library(stylo)
-        #   library(textshape)
-        #   library(tidyverse)
-        #   library(ggplot2)
-        #   library(dendextend)
-        #   library(ggdendro)
-        #   library(stringr)
+        foreach(sliceLength=sliceLengthV) %dopar% {
+          # IT LOOKS LIKE EVERYTHING NEEDS TO BE RE-LOADED WITHIN EACH FORLOOP
+          library(stylo)
+          library(textshape)
+          library(tidyverse)
+          library(ggplot2)
+          library(dendextend)
+          library(ggdendro)
+          library(stringr)
         # ACTIVATE MULTIPROCESSIN - END
           
           for (mffLimit in mffLimitV){
@@ -343,26 +343,15 @@ for (distanceMethod in distanceMethodV){
               # - check if the file exists: yes > skip; no > generate results and save
               
               if (file.exists(fileCompletePath) == FALSE){
-                
-                # v4: WRAPPING INTO TRYCATCH();
-                message("\t\t> corpus.features...")
                 corpus.features <- txt.to.features(corpus, ngram.size=nGramSize, features=featureType)
-                message("\t\t> corpus.sliced...")
                 corpus.sliced <- make.slices.mgr(corpus.features, sampling = samplingType, slice.start = sliceStart,
                                                  slice.size = sliceLength, number.of.slices = sliceTotal)
-                message("\t\t> frequent.features...")
                 frequent.features <- make.frequency.list(corpus.sliced, head=mffLimit)
-                message("\t\t> freqs...")
                 freqs <- make.table.of.frequencies(corpus.sliced, features=frequent.features)
-                message("\t\t> trying culled.freqs...")
-                culled.freqs <- tryCatch(perform.culling(freqs, culling.level=culling), error = function(e) NULL)
                 
-                # corpus.features <- txt.to.features(corpus, ngram.size=nGramSize, features=featureType)
-                # corpus.sliced <- make.slices.mgr(corpus.features, sampling = samplingType, slice.start = sliceStart,
-                #                                  slice.size = sliceLength, number.of.slices = sliceTotal)
-                # frequent.features <- make.frequency.list(corpus.sliced, head=mffLimit)
-                # freqs <- make.table.of.frequencies(corpus.sliced, features=frequent.features)
-                # culled.freqs <- perform.culling(freqs, culling.level=culling)
+                # v5: WHAT IS NEEDED IS TO CHECK WHETHER CULLED.FREQS IS NOT EMPTY (WHICH MAY HAPPEN WITH CULLING)
+                culled.freqs <- perform.culling(freqs, culling.level=culling)
+                if (ncol(culled.freqs) == 0){culled.freqs = NULL}
                 
                 # ADDED IN v3 TO SKIP CASES WHEN THERE IS NO DATA TO PROCESS (CULLING TOO HIGH, SLICES TOO SMALL) 
                 if(is.matrix(culled.freqs) == FALSE & is.data.frame(culled.freqs) == FALSE) {
@@ -370,7 +359,6 @@ for (distanceMethod in distanceMethodV){
                 } else if(length(culled.freqs[1,]) < 2 | length(culled.freqs[,1]) < 2) {
                   distanceMatrix <- NULL
                 } else {
-                  print(dim(culled.freqs))
                   # GENERATE DIFFERENCE DISTANCES
                   # - USING STYLO FUNCTIONS
                   if (distanceMethod == "cosine"){distanceMatrix <- dist.cosine(culled.freqs)
