@@ -345,19 +345,17 @@ for (distanceMethod in distanceMethodV){
               if (file.exists(fileCompletePath) == FALSE){
                 
                 # v4: WRAPPING INTO TRYCATCH();
-                culled.freqs <- tryCatch({
-                  message("\t\t> corpus.features...")
-                  corpus.features <- txt.to.features(corpus, ngram.size=nGramSize, features=featureType)
-                  message("\t\t> corpus.sliced...")
-                  corpus.sliced <- make.slices.mgr(corpus.features, sampling = samplingType, slice.start = sliceStart,
-                                                   slice.size = sliceLength, number.of.slices = sliceTotal)
-                  message("\t\t> frequent.features...")
-                  frequent.features <- make.frequency.list(corpus.sliced, head=mffLimit)
-                  message("\t\t> freqs...")
-                  freqs <- make.table.of.frequencies(corpus.sliced, features=frequent.features)
-                  message("\t\t> culled.freqs...")
-                  culled.freqs <- perform.culling(freqs, culling.level=culling)
-                }, error = function(e) NULL)
+                message("\t\t> corpus.features...")
+                corpus.features <- txt.to.features(corpus, ngram.size=nGramSize, features=featureType)
+                message("\t\t> corpus.sliced...")
+                corpus.sliced <- make.slices.mgr(corpus.features, sampling = samplingType, slice.start = sliceStart,
+                                                 slice.size = sliceLength, number.of.slices = sliceTotal)
+                message("\t\t> frequent.features...")
+                frequent.features <- make.frequency.list(corpus.sliced, head=mffLimit)
+                message("\t\t> freqs...")
+                freqs <- make.table.of.frequencies(corpus.sliced, features=frequent.features)
+                message("\t\t> trying culled.freqs...")
+                culled.freqs <- tryCatch(perform.culling(freqs, culling.level=culling), error = function(e) NULL)
                 
                 # corpus.features <- txt.to.features(corpus, ngram.size=nGramSize, features=featureType)
                 # corpus.sliced <- make.slices.mgr(corpus.features, sampling = samplingType, slice.start = sliceStart,
