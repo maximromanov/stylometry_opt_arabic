@@ -211,8 +211,8 @@ make.slices.mgr <- function(tokenized.text, sampling = "slicing", slice.start = 
         #number.of.slices.mod = as.integer((text.length-slice.start)/slice.size)
         # DIRTY WORKAROUND > for short texts: EACH SLICE == FULL TEXT
         message(names(tokenized.text)[i])
-        message(paste("\t", "- text length (in words): ", text.length, sep = ""))
-        message(paste("\t", "- nr. of slices: ", number.of.slices, sep = ""))
+        #message(paste("\t", "- text length (in words): ", text.length, sep = ""))
+        #message(paste("\t", "- nr. of slices: ", number.of.slices, sep = ""))
         message(paste("\t", "- WARNING: slices contain the SAME text because the text is too short"))
         # iterate over the samples:
         current.start.index = slice.start
@@ -229,9 +229,9 @@ make.slices.mgr <- function(tokenized.text, sampling = "slicing", slice.start = 
         }
       } else {
         #number.of.slices = floor((text.length-sample.overlap)/(sample.size-sample.overlap))
-        message(names(tokenized.text)[i])
-        message(paste("\t", "- text length (in words): ", text.length, sep = ""))
-        message(paste("\t", "- nr. of slices: ", number.of.slices, sep = ""))
+        #message(names(tokenized.text)[i])
+        #message(paste("\t", "- text length (in words): ", text.length, sep = ""))
+        #message(paste("\t", "- nr. of slices: ", number.of.slices, sep = ""))
         # iterate over the samples:
         current.start.index = slice.start
         for(sample.index in 1:number.of.slices) {
@@ -367,6 +367,7 @@ for (distanceMethod in distanceMethodV){
                 } else if(length(culled.freqs[1,]) < 2 | length(culled.freqs[,1]) < 2) {
                   distanceMatrix <- NULL
                 } else {
+                  print(dim(culled.freqs))
                   # GENERATE DIFFERENCE DISTANCES
                   # - USING STYLO FUNCTIONS
                   if (distanceMethod == "cosine"){distanceMatrix <- dist.cosine(culled.freqs)
