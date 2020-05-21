@@ -318,18 +318,18 @@ for (distanceMethod in distanceMethodV){
         message("\t",distanceMethod,"::",clusteringMethod,"::",featureType,"::",nGramSize)
         
         # SINGLE PROCESSING: COMMENT OUT MULTIPROCESSING SECTION
-        #for (sliceLength in sliceLengthV){
+        for (sliceLength in sliceLengthV){
         
         # ACTIVATE MULTIPROCESSING - START (COMMENT OUT LINE ABOVE)
-        foreach(sliceLength=sliceLengthV) %dopar% {
-          # IT LOOKS LIKE EVERYTHING NEEDS TO BE RE-LOADED WITHIN EACH FORLOOP
-          library(stylo)
-          library(textshape)
-          library(tidyverse)
-          library(ggplot2)
-          library(dendextend)
-          library(ggdendro)
-          library(stringr)
+        # foreach(sliceLength=sliceLengthV) %dopar% {
+        #   # IT LOOKS LIKE EVERYTHING NEEDS TO BE RE-LOADED WITHIN EACH FORLOOP 
+        #   library(stylo)
+        #   library(textshape)
+        #   library(tidyverse)
+        #   library(ggplot2)
+        #   library(dendextend)
+        #   library(ggdendro)
+        #   library(stringr)
         # ACTIVATE MULTIPROCESSIN - END
           
           for (mffLimit in mffLimitV){
