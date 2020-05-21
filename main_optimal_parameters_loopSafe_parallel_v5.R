@@ -350,7 +350,9 @@ for (distanceMethod in distanceMethodV){
                 freqs <- make.table.of.frequencies(corpus.sliced, features=frequent.features)
                 
                 # v5: WHAT IS NEEDED IS TO CHECK WHETHER CULLED.FREQS IS NOT EMPTY (WHICH MAY HAPPEN WITH CULLING)
+                # --- AND ENSURE THAT IS IS A MATRIX
                 culled.freqs <- perform.culling(freqs, culling.level=culling)
+                culled.freqs <- as.matrix(culled.freqs)
                 if (ncol(culled.freqs) == 0){culled.freqs = NULL}
                 
                 # ADDED IN v3 TO SKIP CASES WHEN THERE IS NO DATA TO PROCESS (CULLING TOO HIGH, SLICES TOO SMALL) 
