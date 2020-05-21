@@ -20,7 +20,7 @@ cores         <- 6
 # MAIN TEST PARAMETERS
 ###########################################################################
 featureTypeV       <- c("c") # c("c", "w")
-nGramSizeV         <- c(6, 7) #seq(1, 6, 1)
+nGramSizeV         <- c(1, 2, 3, 4, 5, 6, 7) #seq(1, 6, 1)
 mffLimitV          <- seq(100, 500, 100)
 cullingV           <- seq(0, 50, 10)
 samplingType       <- "slicing"
