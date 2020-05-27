@@ -20,9 +20,9 @@ cores         <- 6
 # MAIN TEST PARAMETERS
 ###########################################################################
 featureTypeV       <- c("c") # c("c", "w")
-nGramSizeV         <- c(1, 2, 3, 4, 5, 6, 7) #seq(1, 6, 1)
-mffLimitV          <- seq(100, 500, 100)
-cullingV           <- seq(0, 50, 10)
+nGramSizeV         <- c(6) #seq(1, 6, 1)
+mffLimitV          <- c(100) #seq(100, 500, 100)
+cullingV           <- c(20) #seq(0, 50, 10)
 samplingType       <- "slicing"
 sliceStart         <- 1000 # means that the first `sliceStart` words will be skipped
 sliceTotal         <- 2
@@ -54,8 +54,8 @@ clusteringMethodV  <- c(# HCLUST METHODS
   "ward.D2"      # important
 )
 
-#distanceMethodV    <- c("cosine") 
-#clusteringMethodV  <- c("ward.D2")
+distanceMethodV    <- c("eder") 
+clusteringMethodV  <- c("ward.D2")
 
 # IF TRUE, DENDROGRAMS FOR EACH RUN WILL BE GENERATED
 saveGraphParameter <- FALSE 
@@ -450,20 +450,20 @@ for (distanceMethod in distanceMethodV){
                     select(author_book, book_cluster_match) %>%
                     unique
                   
-                  # CHECK IF BOOKS MATCH THROUGH DISTANCES
-                  bookDistanceMatch <- distanceTidy %>%
-                    filter(value > 0) %>% unique %>%
-                    mutate(author_book = str_replace_all(row, "_\\d+", "")) %>%
-                    mutate(book_match = str_replace_all(col, "_\\d+", "")) %>%
-                    arrange(author_book, value) %>%
-                    select(author_book, book_match, value) %>% unique %>%
-                    group_by(author_book) %>%
-                    top_n(-1, wt=value) %>%
-                    mutate(dist_value=value) %>%
-                    ungroup() %>%
-                    mutate(book_dist_match = ifelse(author_book == book_match, 1, 0)) %>%
-                    select(author_book, book_match, book_dist_match, dist_value) %>%
-                    unique
+                  # # CHECK IF BOOKS MATCH THROUGH DISTANCES
+                  # bookDistanceMatch <- distanceTidy %>%
+                  #   filter(value > 0) %>% unique %>%
+                  #   mutate(author_book = str_replace_all(row, "_\\d+", "")) %>%
+                  #   mutate(book_match = str_replace_all(col, "_\\d+", "")) %>%
+                  #   arrange(author_book, value) %>%
+                  #   select(author_book, book_match, value) %>% unique %>%
+                  #   group_by(author_book) %>%
+                  #   top_n(-1, wt=value) %>%
+                  #   mutate(dist_value=value) %>%
+                  #   ungroup() %>%
+                  #   mutate(book_dist_match = ifelse(author_book == book_match, 1, 0)) %>%
+                  #   select(author_book, book_match, book_dist_match, dist_value) %>%
+                  #   unique
                   
                   # CHECK IF AUTHORS MATCH THROUGH CLUSTERING
                   authorClusterMatch <- clusters %>%
@@ -475,28 +475,29 @@ for (distanceMethod in distanceMethodV){
                     select(author_book, author, author_cluster_match) %>%
                     unique
                   
-                  # CHECK IF AUTHORS MATCH THROUGH DISTANCES
-                  authorDistanceMatch <- distanceTidy %>%
-                    filter(value > 0) %>% unique %>%
-                    mutate(author_book = str_replace_all(row, "_\\d+", "")) %>%
-                    mutate(author1 = str_replace_all(row, "_\\w+$", "")) %>%
-                    mutate(book_match = str_replace_all(col, "_\\d+", "")) %>%
-                    mutate(author2 = str_replace_all(col, "_\\w+$", "")) %>%
-                    select(author_book, book_match, author1, author2, value) %>% unique %>%
-                    group_by(author_book) %>%
-                    top_n(-1, wt=value) %>%
-                    mutate(dist_value=value) %>%
-                    ungroup() %>%
-                    mutate(author_dist_match = ifelse(author1 == author2, 1, 0)) %>%
-                    select(author_book, author_dist_match) %>%
-                    unique
+                  # # CHECK IF AUTHORS MATCH THROUGH DISTANCES
+                  # authorDistanceMatch <- distanceTidy %>%
+                  #   filter(value > 0) %>% unique %>%
+                  #   mutate(author_book = str_replace_all(row, "_\\d+", "")) %>%
+                  #   mutate(author1 = str_replace_all(row, "_\\w+$", "")) %>%
+                  #   mutate(book_match = str_replace_all(col, "_\\d+", "")) %>%
+                  #   mutate(author2 = str_replace_all(col, "_\\w+$", "")) %>%
+                  #   select(author_book, book_match, author1, author2, value) %>% unique %>%
+                  #   group_by(author_book) %>%
+                  #   top_n(-1, wt=value) %>%
+                  #   mutate(dist_value=value) %>%
+                  #   ungroup() %>%
+                  #   mutate(author_dist_match = ifelse(author1 == author2, 1, 0)) %>%
+                  #   select(author_book, author_dist_match) %>%
+                  #   unique
                   
                   # AGGREGATE RESULTS INTO ONE DATAFRAME
                   final <- bookClusterMatch %>%
-                    left_join(bookDistanceMatch, by="author_book") %>%
+                    #left_join(bookDistanceMatch, by="author_book") %>%
                     left_join(authorClusterMatch, by="author_book") %>%
-                    left_join(authorDistanceMatch, by="author_book") %>%
-                    select(author_book, book_match, book_cluster_match, book_dist_match, author_cluster_match, author_dist_match, dist_value) %>%
+                    #left_join(authorDistanceMatch, by="author_book") %>%
+                    #select(author_book, book_match, book_cluster_match, -book_dist_match, author_cluster_match, -author_dist_match, dist_value) %>%
+                    select(author_book, book_cluster_match, author_cluster_match) %>%
                     mutate(feature = paste0(featureType,nGramSize)) %>%
                     mutate(mff = mffLimit) %>%
                     mutate(culling = culling) %>%
@@ -509,10 +510,8 @@ for (distanceMethod in distanceMethodV){
                   
                   # SAVE IN APPEND MODE - saving to avoid failure in script execution and losing results
                   finalResults <- finalResults %>%
-                    select(author_book,
-                           clustering_method, book_cluster_match, author_cluster_match,
-                           distance_method, dist_value, book_match, book_dist_match, author_dist_match,
-                           feature, mff, culling, slices_compared, slice_len) %>%
+                    select(author_book, clustering_method, book_cluster_match, author_cluster_match,
+                           distance_method, feature, mff, culling, slices_compared, slice_len) %>%
                     unique
                   
                   write_tsv(finalResults, fileCompletePath, na = "NA", append = FALSE, col_names = TRUE)
@@ -522,12 +521,11 @@ for (distanceMethod in distanceMethodV){
                   message("\t--- no clustering is possible with these parameters. Skipping to the next set of values...")
                   
                   # SAVE A TSV FILE WITH NO VALUES TO INDICATE THAT NO ANALYSIS POSSIBLE WITH THESE PARAMETERS
-                  emptyRow <- c("NO_DATA", clusteringMethod, NA, NA, distanceMethod, NA, NA, NA, NA,
+                  emptyRow <- c("NO_DATA", clusteringMethod, NA, NA, distanceMethod,
                                 paste0(featureType, nGramSize), mffLimit, culling, sliceTotal, sliceLength)
                   finalResults <- rbind(finalResults, emptyRow)
                   colnames(finalResults) <- c("author_book", "clustering_method", "book_cluster_match", "author_cluster_match",
-                                              "distance_method", "dist_value", "book_match", "book_dist_match", "author_dist_match",
-                                              "feature", "mff", "culling", "slices_compared", "slice_len")
+                                              "distance_method", "feature", "mff", "culling", "slices_compared", "slice_len")
                   write_tsv(finalResults, fileCompletePath, na = "NA", append = FALSE, col_names = TRUE)
                   finalResults = data.frame()
                   
@@ -543,21 +541,27 @@ for (distanceMethod in distanceMethodV){
   }
 }
 
-# SAVE FINAL RESULTS: 
+###################################################################################################################################
+# NOTE: The section vbelow is commented out, because a python script is now used to merge results by distances; much faster
+###################################################################################################################################
 
-# INITIATE DATAFRAME FOR FINAL RESULTS - START
-finalResults <- combine.results(results.dir = savePath, prefix = "_TEMP_")
-colnames(finalResults) <- c("author_book", "clustering_method", "book_cluster_match",
-                   "author_cluster_match", "distance_method", "dist_value",
-                   "book_dist_matched", "book_dist_match", "author_dist_match",
-                   "feature", "mff", "culling", "slices_compared", "slice_len")
+###################################################################################################################################
+# SAVE FINAL RESULTS:
+###################################################################################################################################
 
-# cummulative fileNameTSV: must be defined in the variable section --- this one cannot be automatically generated
-write_tsv(finalResults, paste0(savePath,fileNameTSV), na = "NA", append = FALSE, col_names = TRUE)
-# INITIATE DATAFRAME FOR FINAL RESULTS - END
-
-# REMOVE RESULTS ONLY AFTER ALL OTHER STEPS ARE COMPLETE
-remove.temp.results(results.dir = savePath, prefix = "_TEMP_")
+# # INITIATE DATAFRAME FOR FINAL RESULTS - START
+# finalResults <- combine.results(results.dir = savePath, prefix = "_TEMP_")
+# colnames(finalResults) <- c("author_book", "clustering_method", "book_cluster_match",
+#                    "author_cluster_match", "distance_method", "dist_value",
+#                    "book_dist_matched", "book_dist_match", "author_dist_match",
+#                    "feature", "mff", "culling", "slices_compared", "slice_len")
+# 
+# # cummulative fileNameTSV: must be defined in the variable section --- this one cannot be automatically generated
+# write_tsv(finalResults, paste0(savePath,fileNameTSV), na = "NA", append = FALSE, col_names = TRUE)
+# # INITIATE DATAFRAME FOR FINAL RESULTS - END
+# 
+# # REMOVE RESULTS ONLY AFTER ALL OTHER STEPS ARE COMPLETE
+# remove.temp.results(results.dir = savePath, prefix = "_TEMP_")
 
 stopCluster(cl)
 message("ALL DONE!")
