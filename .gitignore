@@ -3,5 +3,5 @@
 .Rhistory
 
 # FOLDERS
-/graph_test/*
-/*_ResultsMerged/*
+graph_test/*
+*_ResultsMerged/*
