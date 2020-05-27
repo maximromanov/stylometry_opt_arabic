@@ -1,5 +1,7 @@
 .DS_Store
 .RData
 .Rhistory
-./graph_test/*
-./*_ResultsMerged/*
+
+# FOLDERS
+/graph_test/*
+/*_ResultsMerged/*
