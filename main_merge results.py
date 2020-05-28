@@ -19,7 +19,7 @@ for entry in os.scandir(srcFolder):
     if (("/_TEMP_" in entry.path) and entry.path.endswith(".csv")) and entry.is_file():
         print(entry.path)
         base = entry.path.split("/")[-1].split("_")
-        targetFile = trgFolder + "Hindawi_C65_%s_%s.csv" % (base[2][:1], base[7])
+        targetFile = trgFolder + "Hindawi_C65_%s_%s_%s.csv" % (base[2][:1], base[7], base[8])
         with open(entry.path, "r", encoding="utf8") as f1:
             data = f1.read().split("\n")
             writeToFile(targetFile, data)
