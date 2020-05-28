@@ -4,4 +4,5 @@
 
 # FOLDERS
 graph_tests/*
+graph_results/*
 *_ResultsMerged/*
