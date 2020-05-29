@@ -11,15 +11,15 @@ set.seed(786)
 
 ###########################################################################
 # CORPUS FOLDER
-corpusFolder  <- "../Hindawi_Corpus/corpus300/"
-versionRun    <- "CUMULATIVE"
+corpusFolder  <- "../Hindawi_Corpus_Rstylo/corpus300/"
+versionRun    <- "CUMULATIVE_c300"
 cores         <- 6
 ###########################################################################
 
 ###########################################################################
 # MAIN EXPERIMENT PARAMETERS
 ###########################################################################
-featureVector      <- c("w1", "w2", "w3", "c2", "c3", "c4", "c5", "c6")
+featureVector      <- c("w1", "w2", "w3", "c2", "c3", "c4", "c5")
 mffLimitV          <- seq(100, 600, 100)
 cullingV           <- seq(0, 50, 10)
 samplingType       <- "slicing"
@@ -29,8 +29,9 @@ sliceLengthV       <- seq(100, 11000, 100) #seq(100, 11000, 100)
 
 # FORMATTED FOR EASY COMMENTING OUT OF SPECIFIC DISTANCES 
 distanceMethodV    <- c("cosine", "delta", "argamon", "eder", "minmax", "entropy", "simple", "wurzburg", "manhattan", "canberra", "minkowski", "euclidean") 
-# EXCLUDED: binary, and maximum
-clusteringMethodV  <- c("average", "median", "centroid", "mcquitty", "complete", "ward.D2")
+# EXCLUDED: "binary", "maximum"
+clusteringMethodV  <- c("mcquitty", "ward.D2")
+# EXCLUDED: "average", "median", "centroid", "complete"
 
 # IF TRUE, DENDROGRAMS FOR EACH RUN WILL BE GENERATED
 saveGraphParameter <- FALSE 
