@@ -11,8 +11,8 @@ set.seed(786)
 
 ###########################################################################
 # CORPUS FOLDER
-corpusFolder  <- "./Hindawi_Corpus_65/"
-versionRun    <- "_CUMULATIVE"
+corpusFolder  <- "../Hindawi_Corpus/corpus300/"
+versionRun    <- "CUMULATIVE"
 cores         <- 6
 ###########################################################################
 
@@ -28,7 +28,7 @@ sliceTotal         <- 2
 sliceLengthV       <- seq(100, 11000, 100) #seq(100, 11000, 100)
 
 # FORMATTED FOR EASY COMMENTING OUT OF SPECIFIC DISTANCES 
-distanceMethodV    <- c( "cosine", "delta", "argamon", "eder", "minmax", "entropy", "simple", "wurzburg", "manhattan", "canberra", "minkowski", "euclidean") 
+distanceMethodV    <- c("cosine", "delta", "argamon", "eder", "minmax", "entropy", "simple", "wurzburg", "manhattan", "canberra", "minkowski", "euclidean") 
 # EXCLUDED: binary, and maximum
 clusteringMethodV  <- c("average", "median", "centroid", "mcquitty", "complete", "ward.D2")
 

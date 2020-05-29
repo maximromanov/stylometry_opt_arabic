@@ -84,26 +84,80 @@ for(file in resultsFiles){
 
 
 ###############################################################
-# hindawi65 <- "/Users/romanovienna/_ADHFANIS_Data/chapter_3/optimal_parameters/Hindawi_Corpus_65/"
-# hindawi65files <- unlist(list.files(hindawi65))
-# 
-# hindawi65df <- as.data.frame(hindawi65files)
-# 
-# hindawi65df <- hindawi65df %>%
-#   mutate(authors = str_replace_all(hindawi65files, "_[\\w\\.]+$", "")) %>%
-#   group_by(authors) %>%
-#   count()
+hindawi65 <- "/Users/romanovienna/_ADHFANIS_Data/chapter_3/optimal_parameters/Hindawi_Corpus_65/"
+hindawi65 <- "/Users/romanovienna/Dropbox/5.Capta/Scraping/Hindawi_selected/corpus300/"
+hindawi65files <- unlist(list.files(hindawi65))
+
+hindawi65df <- as.data.frame(hindawi65files)
+hindawi300 <- as.data.frame(hindawi65files)
+
+hindawi65df <- hindawi65df %>%
+  mutate(authors = str_replace_all(hindawi65files, "_[\\w\\.]+$", "")) %>%
+  group_by(authors) %>%
+  count()
+
+sum(hindawi65df$n)
 
 
 #  authors                        n
 #  <chr>                      <int>
-#1 1331JurjiZaydan               22
-#2 1342MustafaLutfiManfaluti      5
-#3 1349JibranKhalilJibran         2
-#4 1368CaliJarim                 10
-#5 1368IbrahimCabdQadirMazini     6
-#6 1373NiqulaHaddad               9
-#7 1375MuhammadHusaynHaykal       3
-#8 1392TahaHusayn                 8
+#1  1331JurjiZaydan               22 (38)
+#2  1342MustafaLutfiManfaluti      5
+#3  1349JibranKhalilJibran         2
+#4  1368CaliJarim                 10 (12)
+#5  1368IbrahimCabdQadirMazini     6 (21 total)
+#6  1373NiqulaHaddad               9 (12)
+#7  1375MuhammadHusaynHaykal       3 (16)
+#8  1392TahaHusayn                 8 (50 total)
+#=====
+#9  1373AhmadAmin.................25
+#10 1383CabbasMahmudCaqqad........87
+#11 1377SalamaMusa................35
+#12 1381MarunCabbud...............20
 
-
+# library(tidyverse)
+# library(readr)
+# 
+# metadata_books <- read_delim("/Users/romanovienna/_ADHFANIS_Data/chapter_3/Hindawi_300/metadata_books_300.csv", 
+#                              "\t", escape_double = FALSE, trim_ws = TRUE)
+# 
+# selectedAuthors <- metadata_books %>%
+#   group_by(authorURI) %>%
+#   count() %>%
+#   arrange(desc(n))
+# 
+# sum(selectedAuthors$n)
+# 
+# knitr::kable(selectedAuthors, format="markdown")
+# 
+# metadata_books %>% select(-authorURI, -BookID, -BookTitle) %>%
+#   knitr::kable(format="markdown")
+# 
+# updated <- metaLight %>%
+#   left_join(selectedAuthors) %>%
+#   filter(!is.na(n)) %>%
+#   filter(WORD_COUNT >= 15000) %>%
+#   arrange(authorURI, desc(WORD_COUNT)) %>%
+#   group_by(authorURI) %>% top_n(25, WORD_COUNT) %>%
+#   select(-AuthorID, -n)
+# 
+# 
+# check <- updated %>%
+#   group_by(authorURI) %>%
+#   count() %>%
+#   #filter(n >= 5) %>%
+#   arrange(desc(n))
+# 
+# hindawi300 <- hindawi65df %>%
+#   mutate(BookURI_STYLO = str_replace_all(hindawi65files, "\\.txt", "")) %>%
+#   select(BookURI_STYLO)
+# 
+# updated300 <- updated %>% 
+#   right_join(hindawi300)
+#   
+# 
+# write_delim(updated300, "Dropbox/5.Capta/Scraping/Hindawi_selected/metadata_books_300.csv", delim = "\t", col_names = TRUE)
+# 
+# 
+# 
+# 
